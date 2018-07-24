@@ -110,6 +110,17 @@ class Management
         return $actions;
     }
 
+    /**
+     * @return array
+     */
+    public static function getTablesWithForeignKeyConstraints(): array
+    {
+        $constraintDefinitions = [];
+        foreach (self::getForeignKeyConstraintsDefinitions() as $extension => $definition) {
+            ArrayUtility::mergeRecursiveWithOverrule($constraintDefinitions, $definition);
+        }
+        return array_keys($constraintDefinitions);
+    }
 
     /**
      * @param string $tableName

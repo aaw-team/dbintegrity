@@ -1,0 +1,32 @@
+{
+    "name": "aaw-team/dbintegrity",
+    "type": "typo3-cms-extension",
+    "description": "Extension development: manage database integrity",
+    "homepage": "",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Agentur am Wasser | Maeder & Partner AG",
+            "role": "Developer",
+            "email": "development@agenturamwasser.ch",
+            "homepage": "https://web.agenturamwasser.ch/"
+        }
+    ],
+    "require": {
+        "php": ">=7,<7.3",
+        "typo3/cms-core": "^8.7.17"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.11",
+        "nimut/testing-framework": "^4.0"
+    },
+    "replace": {
+        "dbintegrity": "self.version",
+        "typo3-ter/dbintegrity": "self.version"
+    },
+    "autoload": {
+        "psr-4": {
+            "AawTeam\\Dbintegrity\\": "Classes/"
+        }
+    }
+}

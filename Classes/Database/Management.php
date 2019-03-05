@@ -9,6 +9,7 @@ namespace AawTeam\Dbintegrity\Database;
  * LICENSE.txt file that was distributed with this source code.
  */
 
+use Doctrine\DBAL\Platforms\MySqlPlatform;
 use TYPO3\CMS\Core\Utility\ArrayUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -424,6 +425,26 @@ class Management
             }
         }
         return ['sqlString' => $sqlString];
+    }
+
+    /**
+     * @param string $tableName
+     */
+    public static function disableForeignKeyChecks(string $tableName)
+    {
+        if (is_a(self::getConnectionForTable($tableName)->getDatabasePlatform(), MySqlPlatform::class)) {
+            self::getConnectionForTable($tableName)->executeQuery('SET FOREIGN_KEY_CHECKS = 0');
+        }
+    }
+
+    /**
+     * @param string $tableName
+     */
+    public static function enableForeignKeyChecks(string $tableName)
+    {
+        if (is_a(self::getConnectionForTable($tableName)->getDatabasePlatform(), MySqlPlatform::class)) {
+            self::getConnectionForTable($tableName)->executeQuery('SET FOREIGN_KEY_CHECKS = 1');
+        }
     }
 
     /**

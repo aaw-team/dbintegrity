@@ -10,10 +10,8 @@ namespace AawTeam\Dbintegrity\Hook;
  */
 
 use AawTeam\Dbintegrity\Database\Management;
-use Doctrine\DBAL\Platforms\MySqlPlatform;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\SingletonInterface;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * DataHandlerHook
@@ -43,7 +41,7 @@ class DataHandlerHook implements SingletonInterface
             // If the table defines foreign key constraints, disable foreign key checks
             if (in_array($table, Management::getTablesWithForeignKeyConstraints())) {
                 if ($this->depthCounter === 0) {
-                    $this->disableForeignKeyChecks($table);
+                    Management::disableForeignKeyChecks($table);
                 }
                 $this->depthCounter++;
             }
@@ -71,37 +69,9 @@ class DataHandlerHook implements SingletonInterface
                     $this->depthCounter--;
                 }
                 if ($this->depthCounter === 0) {
-                    $this->enableForeignKeyChecks($table);
+                    Management::enableForeignKeyChecks($table);
                 }
             }
         }
-    }
-
-    /**
-     * @param string $tableName
-     */
-    protected function disableForeignKeyChecks(string $tableName)
-    {
-        if (is_a($this->getConnectionForTable($tableName)->getDatabasePlatform(), MySqlPlatform::class)) {
-            $this->getConnectionForTable($tableName)->executeQuery('SET FOREIGN_KEY_CHECKS = 0');
-        }
-    }
-
-    /**
-     * @param string $tableName
-     */
-    protected function enableForeignKeyChecks(string $tableName)
-    {
-        if (is_a($this->getConnectionForTable($tableName)->getDatabasePlatform(), MySqlPlatform::class)) {
-            $this->getConnectionForTable($tableName)->executeQuery('SET FOREIGN_KEY_CHECKS = 1');
-        }
-    }
-
-    /**
-     * @return \TYPO3\CMS\Core\Database\Connection
-     */
-    protected function getConnectionForTable(string $tableName): \TYPO3\CMS\Core\Database\Connection
-    {
-        return GeneralUtility::makeInstance(\TYPO3\CMS\Core\Database\ConnectionPool::class)->getConnectionForTable($tableName);
     }
 }

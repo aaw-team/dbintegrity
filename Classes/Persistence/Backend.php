@@ -42,27 +42,39 @@ class Backend extends \TYPO3\CMS\Extbase\Persistence\Generic\Backend
      */
     protected function insertObject(\TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface $object, \TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface $parentObject = null, $parentPropertyName = '')
     {
-        $className = get_class($object);
-        if (!array_key_exists($className, $this->disableForeignKeyChecks)) {
-            $this->disableForeignKeyChecks[$className] = ($object instanceof DisableForeignKeyChecksInterface);
+        if (!$this->shouldDisableForeignKeyChecks($object)) {
+            return parent::insertObject($object, $parentObject, $parentPropertyName);
         }
-        if ($this->disableForeignKeyChecks[$className]) {
-            $tableName = $this->getTableNameOfDomainObjectClassName($className);
-            Management::disableForeignKeyChecks($tableName);
-        }
+
+        // Wrap the parent method call in foreign key de-/reactivation
+        $tableName = $this->getTableNameOfDomainObject($object);
+        Management::disableForeignKeyChecks($tableName);
         $return = parent::insertObject($object, $parentObject, $parentPropertyName);
-        if ($this->disableForeignKeyChecks[$className]) {
-            Management::enableForeignKeyChecks($tableName);
-        }
+        Management::enableForeignKeyChecks($tableName);
         return $return;
     }
 
     /**
-     * @param string $className
+     * @param \TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface $object
+     * @throws \InvalidArgumentException
+     * @return bool
+     */
+    protected function shouldDisableForeignKeyChecks(\TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface $object): bool
+    {
+        $className = get_class($object);
+        if (!array_key_exists($className, $this->disableForeignKeyChecks)) {
+            $this->disableForeignKeyChecks[$className] = ($object instanceof DisableForeignKeyChecksInterface);
+        }
+        return $this->disableForeignKeyChecks[$className];
+    }
+
+    /**
+     * @param \TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface $object
      * @return string
      */
-    protected function getTableNameOfDomainObjectClassName(string $className): string
+    protected function getTableNameOfDomainObject(\TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface $object): string
     {
+        $className = get_class($object);
         if (version_compare(TYPO3_version, '9.5', '<')) {
             return $tableName = $this->dataMapper->getDataMap($className)->getTableName();
         }

@@ -10,6 +10,9 @@ namespace AawTeam\Dbintegrity\Persistence;
  */
 
 use AawTeam\Dbintegrity\Database\Management;
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Backend
@@ -37,6 +40,11 @@ class Backend extends \TYPO3\CMS\Extbase\Persistence\Generic\Backend
     protected $disableForeignKeyChecks = [];
 
     /**
+     * @var array
+     */
+    protected $nullableColumnsWithForeignKeyConstraints = [];
+
+    /**
      * {@inheritDoc}
      * @see \TYPO3\CMS\Extbase\Persistence\Generic\Backend::insertObject()
      */
@@ -51,6 +59,64 @@ class Backend extends \TYPO3\CMS\Extbase\Persistence\Generic\Backend
         Management::disableForeignKeyChecks($tableName);
         $return = parent::insertObject($object, $parentObject, $parentPropertyName);
         Management::enableForeignKeyChecks($tableName);
+        return $return;
+    }
+
+    /**
+     * Extend parent method: Nullable columns that:
+     *   1. belong to a DomainObject that wants to disable foreign key
+     *      checks (@see Backend::shouldDisableForeignKeyChecks())
+     *   2. are local part of a foreign key constraint
+     *   3. can be null and define null as default value
+     *   4. should have a null value (@see $object)
+     *   5. are not present or have a 'zero-value' in $row
+     *
+     * should become null. Like this, we workaround the fact, that
+     * extbase uses zero as 'null-value'. And on table creation, the
+     * columns got such a value with fk checks disabled.
+     *
+     * @experimental
+     * {@inheritDoc}
+     * @see \TYPO3\CMS\Extbase\Persistence\Generic\Backend::addCommonFieldsToRow()
+     */
+    protected function addCommonFieldsToRow(\TYPO3\CMS\Extbase\DomainObject\DomainObjectInterface $object, array &$row)
+    {
+        $return = parent::addCommonFieldsToRow($object, $row);
+
+        if ($this->shouldDisableForeignKeyChecks($object)) {
+            $tableName = $this->getTableNameOfDomainObject($object);
+
+            // In-memory cache
+            if (!array_key_exists($tableName, $this->nullableColumnsWithForeignKeyConstraints)) {
+                $this->nullableColumnsWithForeignKeyConstraints[$tableName] = [];
+
+                $possibleColumns = [];
+                foreach ($this->getConnectionForTable($tableName)->getSchemaManager()->listTableColumns($tableName) as $column) {
+                    if ($column->getNotnull() === false && $column->getDefault() === null) {
+                        $possibleColumns[] = $column->getName();
+                    }
+                }
+                foreach ($this->getConnectionForTable($tableName)->getSchemaManager()->listTableForeignKeys($tableName) as $foreignKey) {
+                    foreach ($foreignKey->getLocalColumns() as $columnName) {
+                        if (in_array($columnName, $possibleColumns)) {
+                            $this->nullableColumnsWithForeignKeyConstraints[$tableName][] = $columnName;
+                        }
+                    }
+                }
+            }
+
+            // Add the null values where needed
+            foreach ($this->nullableColumnsWithForeignKeyConstraints[$tableName] as $columnName) {
+                if (
+                    array_key_exists($columnName, $object->_getProperties())
+                    && $object->_getProperty($columnName) === null
+                    && (!array_key_exists($columnName, $row) || $row === 0)
+                ) {
+                    $row[$columnName] = null;
+                }
+            }
+        }
+
         return $return;
     }
 
@@ -79,5 +145,14 @@ class Backend extends \TYPO3\CMS\Extbase\Persistence\Generic\Backend
             return $tableName = $this->dataMapper->getDataMap($className)->getTableName();
         }
         return $this->dataMapFactory->buildDataMap($className)->getTableName();
+    }
+
+    /**
+     * @param string $tableName
+     * @return Connection
+     */
+    protected function getConnectionForTable(string $tableName): Connection
+    {
+        return GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable($tableName);
     }
 }

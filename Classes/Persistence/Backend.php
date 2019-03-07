@@ -12,6 +12,7 @@ namespace AawTeam\Dbintegrity\Persistence;
 use AawTeam\Dbintegrity\Database\Management;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -113,6 +114,13 @@ class Backend extends \TYPO3\CMS\Extbase\Persistence\Generic\Backend
                     && (!array_key_exists($columnName, $row) || $row === 0)
                 ) {
                     $row[$columnName] = null;
+
+                    /** @var \TYPO3\CMS\Core\Log\Logger $logger */
+                    $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+                    $logger->info('Added NULL value to row', [
+                        'table' => $tableName,
+                        'column' => $columnName
+                    ]);
                 }
             }
         }

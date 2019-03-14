@@ -24,14 +24,17 @@ $bootstrap = function () {
     $extConf = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['dbintegrity'], ['allowed_classes' => false]);
 
     // Register logger
-    if (is_array($extConf) && array_key_exists('enableLog', $extConf) && $extConf['enableLog']) {
-        $GLOBALS['TYPO3_CONF_VARS']['LOG']['AawTeam']['Dbintegrity']['writerConfiguration'] = [
-            \TYPO3\CMS\Core\Log\LogLevel::DEBUG => [
-                \TYPO3\CMS\Core\Log\Writer\FileWriter::class => [
-                    'logFileInfix' => 'dbintegrity',
+    if (is_array($extConf) && array_key_exists('logLevel', $extConf)) {
+        $logLevel = (int)$extConf['logLevel'];
+        if ($logLevel > -1 && $logLevel < 8) {
+            $GLOBALS['TYPO3_CONF_VARS']['LOG']['AawTeam']['Dbintegrity']['writerConfiguration'] = [
+                $logLevel => [
+                    \TYPO3\CMS\Core\Log\Writer\FileWriter::class => [
+                        'logFileInfix' => 'dbintegrity',
+                    ],
                 ],
-            ],
-        ];
+            ];
+        }
     }
 };
 $bootstrap();

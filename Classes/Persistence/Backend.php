@@ -97,30 +97,41 @@ class Backend extends \TYPO3\CMS\Extbase\Persistence\Generic\Backend
                         $possibleColumns[] = $column->getName();
                     }
                 }
+
+                $columnMap = [];
+                $dataMap = $this->dataMapFactory->buildDataMap(get_class($object));
+                // Build columnName => propertyName
+                foreach ($object->_getProperties() as $propertyName => $propertyValue) {
+                    $dataMapperColumnMap = $dataMap->getColumnMap($propertyName);
+                    if ($dataMapperColumnMap) {
+                        $columnMap[$dataMapperColumnMap->getColumnName()] = $propertyName;
+                    }
+                }
+
                 foreach ($this->getConnectionForTable($tableName)->getSchemaManager()->listTableForeignKeys($tableName) as $foreignKey) {
                     foreach ($foreignKey->getLocalColumns() as $columnName) {
-                        if (in_array($columnName, $possibleColumns)) {
-                            $this->nullableColumnsWithForeignKeyConstraints[$tableName][] = $columnName;
+                        if (in_array($columnName, $possibleColumns) && array_key_exists($columnName, $columnMap)) {
+                            $this->nullableColumnsWithForeignKeyConstraints[$tableName][$columnName] = $columnMap[$columnName];
                         }
                     }
                 }
             }
 
             // Add the null values where needed
-            foreach ($this->nullableColumnsWithForeignKeyConstraints[$tableName] as $columnName) {
+            foreach ($this->nullableColumnsWithForeignKeyConstraints[$tableName] as $columnName => $propertyName) {
                 if (
-                    array_key_exists($columnName, $object->_getProperties())
-                    && $object->_getProperty($columnName) === null
-                    && (!array_key_exists($columnName, $row) || $row === 0)
+                    $object->_getProperty($propertyName) === null
+                    && (!array_key_exists($columnName, $row) || $row[$columnName] === 0)
                 ) {
-                    $row[$columnName] = null;
-
                     /** @var \TYPO3\CMS\Core\Log\Logger $logger */
                     $logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
                     $logger->info('Added NULL value to row', [
                         'table' => $tableName,
-                        'column' => $columnName
+                        'column' => $columnName,
+                        'valueBefore' => $row[$columnName] ?? 'NOT_SET',
                     ]);
+
+                    $row[$columnName] = null;
                 }
             }
         }

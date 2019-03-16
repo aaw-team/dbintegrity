@@ -21,7 +21,13 @@ $bootstrap = function () {
     $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tcemain.php']['processDatamapClass'][] = \AawTeam\Dbintegrity\Hook\DataHandlerHook::class;
 
     // Load extension configuration
-    $extConf = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['dbintegrity'], ['allowed_classes' => false]);
+    if (version_compare(TYPO3_version, '9.0', '<')){
+        $extConf = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['dbintegrity'], ['allowed_classes' => false]);
+    } else {
+        $extConf = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(
+            \TYPO3\CMS\Core\Configuration\ExtensionConfiguration::class
+        )->get('dbintegrity');
+    }
 
     // Register logger
     if (is_array($extConf) && array_key_exists('logLevel', $extConf)) {

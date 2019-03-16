@@ -9,6 +9,9 @@ namespace AawTeam\Dbintegrity\Persistence;
  * LICENSE.txt file that was distributed with this source code.
  */
 
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Extbase\Object\ObjectManager;
+
 /**
  * PersistenceManager
  *
@@ -21,8 +24,21 @@ namespace AawTeam\Dbintegrity\Persistence;
 class PersistenceManager extends \TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager
 {
     /**
-     * @var \AawTeam\Dbintegrity\Persistence\Backend
-     * @inject
+     * @var Backend
      */
     protected $backend;
+
+    /**
+     * {@inheritDoc}
+     * @see \TYPO3\CMS\Extbase\Persistence\Generic\PersistenceManager::initializeObject()
+     */
+    public function initializeObject()
+    {
+        parent::initializeObject();
+
+        // Inject our own Backend
+        $this->injectBackend(
+            GeneralUtility::makeInstance(ObjectManager::class)->get(Backend::class)
+        );
+    }
 }
